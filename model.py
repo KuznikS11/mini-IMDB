@@ -50,30 +50,65 @@ def preveri_geslo(up_ime, geslo):
     '''Preveri èe je v bazi uporabnik z podanim uporabniškim imenom in podanim geslom'''
     with baza:
         baza.execute('''SELECT id FROM Uporabnik WHERE up_ime = ? AND geslo = ?''', [up_ime, zakodiraj(geslo)])
-        id_uporabnika = fetchone()
-        if id_uporabnika == 0: #?
-            print('vnešeno uporabniško ime ali geslo je napaèno')
+        id_uporabnika = baza.fetchone()
+        if id_uporabnika is None: #?
+            raise Exception('vnešeno uporabniško ime ali geslo je napacno')
 
 
-def dodaj_filmiZaPogledat(id_uporabnika, id_filma):
+def dodaj_predlog(id_uporabnika, id_filma):
     '''Uporabniku dodamo film, med filme, ki jih želi pogledati'''
-    cur = baza.cursor()
-    cur.execute('''INSERT INTO Filmi_za_pogledat (uporabnik, film) VALUES (?, ?)''', [id_uporabnika, id_filma])
-    cur.close()
-    return id_uporabnika #???
-
-def dodaj_ogledaniFilmi(id_uporabnika, id_filma):
-    '''Uporabniku dodamo film, med filme, ki jih je že pogledal'''
     with baza:
-        baza.execute('''INSERT INTO Filmi_za_pogledat (uporabnik, film) VALUES (?, ?)''', [id_uporabnika, id_filma])
+        baza.execute('''SELECT vsec FROM Predlogi WHERE uporabnik = ? AND film = ?''', [id_uporabnika, id_filma])
+        ocena = baza.fetchone()
+        if ocena is None:
+            baza.execute('''INSERT INTO Predlogi (uporabnik, film, vsec) VALUES (?, ?)''', [id_uporabnika, id_filma, None])
+    
+def dodaj_predloge_glede_na_oceno(id_uporabnika):
+    with baza:
+        baza.execute('''SELECT film, vsec FROM Predlogi WHERE uporabnik = ?''', [id_uporabnika])
+        par = fetchone()
+        id_filma = par[0]
+        ocena = par[1]
+        if ocena == (True, ):
+            baza.execute('''SELECT uporabnik FROM Predlogi WHERE film = ? AND vsec = ?''', [id_filma, ocena])
+            uporabnik2 = baza.fetchone()
+            baza.execute('''SELECT film FROM Predlogi WHERE uporabnik = ? AND vsec = ?''', [uporabnik2, 1])
+            predlogi = baza.fetchall()
+            for predlog in predlogi:
+                baza.execute('''SELECT vsec FROM Predlogi WHERE uporabnik = ? AND film = ?''', [id_uporabnika, predlog[0]])
+                ocena2 = baza.fetchone()
+                if ocena2 is None:
+                    baza.execute('''INSERT INTO Predlogi (film, vsec) VALUES (?, ?)''', [predlog[0], None])
 
-def pokazi_filmiZaPogledat(id_uporabnika):
+        
+        
+    
+
+def dodaj_ogled(id_uporabnika, id_filma, ocena): #oceni film 
+#    None
+#    (None, )
+#    (True, )
+#    (False, )
+    
+    with baza:
+        baza.execute('''SELECT vsec FROM Predlogi WHERE uporabnik = ? AND film = ?''', [id_uporabnika, id_filma])
+        vsec = fetchone()
+        if vsec is None:  #ce film ni med predlogi
+            baza.execute('''INSERT INTO Predlogi (uporabnik, film, vsec) VALUES (?, ?, ?)''', [id_uporabnika, id_filma, ocena])
+
+        else: #ce film je med predlogi
+            if ocena == True:
+                baza.execute('''UPDATE Predlogi SET vsec = ?''', [1])
+            if ocena == False:
+                baza.execute('''UPDATE Predlogi SET vsec = ?''', [0])
+
+def pokazi_filmiZaPogledat(id_uporabnika): #spremeni!
     '''Vrnemo vse filme, ki jih uporabnik želi pogledati'''
     with baza:
         baza.execute('''SELECT id, naslov FROM Film JOIN Filmi_za_pogledat ON id = film WHERE uporabnik = ?''', [id_uporabnika])
         return baza.fetchall()
 
-def pokazi_ogledaniFilmi(id_uporabnika):
+def pokazi_ogledaniFilmi(id_uporabnika):#spremeni!
     '''Vrnemo vse filme, ki jih je uporabnik že pogledal'''
     with baza:
         baza.execute('''SELECT id, naslov FROM Filmi JOIN Ogledani_filmi ON id = film WHERE uporabnik = ?''', [id_uporabnika])
@@ -81,4 +116,4 @@ def pokazi_ogledaniFilmi(id_uporabnika):
 
     
     
-
+# dodaj/ uredi filme, igralce, zvrsti
