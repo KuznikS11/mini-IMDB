@@ -2,10 +2,10 @@ import sqlite3
 import hashlib
 
 datoteka_baze = 'miniIMDb.sqlite3'
-baza = sqlite3.connect(datoteka_baze)
+baza = sqlite3.connect(datoteka_baze, isolation_level=None)
 
 
-def iskanje_filmov(beseda='', leto_zacetek=2000, leto_konec=2015, ocena_min=7, ocena_max=10, zvrst=''):
+def iskanje_filmov(beseda='', leto_zacetek=1000, leto_konec=3000, ocena_min=0, ocena_max=10, zvrst=''):
     '''Vrne seznam vseh filmov, ki ustrezajo vsem danim kriterijem.'''
     with baza:
         cur = baza.cursor()
@@ -38,7 +38,7 @@ def zvrsti_filma():
         return cur.fetchall()
 
 
-def iskanje_po_igralcih(ime_igralca):
+def iskanje_po_igralcih(ime_igralca=''):
     '''Vrne vse filme v katerih je igral igralec, ki ga vpišemo'''
     with baza:
         cur = baza.cursor()
@@ -48,24 +48,32 @@ def iskanje_po_igralcih(ime_igralca):
                         JOIN Igralci ON Vloga.igralec = Igralci.id
                         WHERE ime_igralca LIKE ? OR priimek_igralca LIKE ?''', [ime_igralca+'%', ime_igralca+'%'])
    
-        return cur.fetchall()
+        igralci = cur.fetchall()
+        if len(igralci) != 0:
+            sez = []
+            sez.append(igralci[0])
+            for i in range(len(igralci)-1):
+                if igralci[i] != igralci[i+1]:
+                    sez.append(igralci[i+1])
+            return sez
+        return igralci
 
 
-def podatki_filma(id_filma, naslov):
+def podatki_filma(id_filma):
     '''vrne vse podatke o filmi'''
-    
+
     with baza:
+
         cur = baza.cursor()
-        cur.execute('''SELECT *
+        cur.execute('''SELECT Filmi.naslov, Filmi.trajanje, Filmi.ocena, Filmi.opis, Filmi.reziser, Filmi.scenarist, Filmi.leto, Zvrsti.zvrst
                   FROM Filmi
                   JOIN Zvrsti_filma ON Filmi.id = Zvrsti_filma.film
                   JOIN Zvrsti ON Zvrsti_filma.zvrst = Zvrsti.id
-                  WHERE Filmi.id =?
-                  AND Filmi.naslov = ?''', [id_filma, naslov])
-        return cur.fetchall()
+                  WHERE Filmi.id =?''', [id_filma])
+        return cur.fetchone()
 
 
-def podatki_igralci(id_filma,naslov):
+def podatki_igralci(id_filma):
     '''vrne ime, priimek igralca in njegovo vlogo za podani film'''
     
     with baza:
@@ -74,9 +82,9 @@ def podatki_igralci(id_filma,naslov):
                         FROM Igralci
                         JOIN Vloga ON Vloga.igralec = Igralci.id
                         JOIN Filmi ON Filmi.id = Vloga.film
-                        WHERE Filmi.id = ? AND Filmi.naslov = ?''', [id_filma, naslov])
-   
-        return cur.fetchall()    
+                        WHERE Filmi.id = ?''', [id_filma])
+        
+        return cur.fetchall()
 
 
     
@@ -87,10 +95,15 @@ def zakodiraj(geslo):
 def dodaj_uporabnika(up_ime, geslo):
     '''V bazo dodamo uporabnika: njegovo uporabniško ime in zakodirano geslo'''
     cur = baza.cursor()
-    cur.execute('''INSERT INTO Uporabniki (up_ime, geslo) VALUES (?, ?)''', [up_ime, zakodiraj(geslo)])
-    cur.close()
-    id_uporabnika = cur.lastrowid #dobi zadnji id
-    return id_uporabnika
+    cur.execute('''SELECT Uporabniki.id FROM Uporabniki WHERE up_ime = ? ''', [up_ime])
+    id_uporabnika = cur.fetchone()
+    if id_uporabnika is None:
+        cur.execute('''INSERT INTO Uporabniki (up_ime, geslo) VALUES (?, ?)''', [up_ime, zakodiraj(geslo)])
+        cur.close()
+        id_uporabnika = cur.lastrowid #dobi zadnji id
+        return id_uporabnika
+    else:
+        return None
 
 def preveri_geslo(up_ime, geslo):
     '''Preveri èe je v bazi uporabnik z podanim uporabniškim imenom in podanim geslom'''
@@ -99,8 +112,9 @@ def preveri_geslo(up_ime, geslo):
         kodirano = zakodiraj(geslo)
         cur.execute('''SELECT Uporabniki.id FROM Uporabniki WHERE up_ime = ? AND geslo = ?''', [up_ime, kodirano])
         id_uporabnika = cur.fetchone()
-        if id_uporabnika is None: 
-            raise Exception('vnešeno uporabniško ime ali geslo je napacno')
+        if id_uporabnika is None:
+            return None
+        return id_uporabnika[0]
 
 #    None
 #    (None, )
@@ -175,26 +189,67 @@ def pokazi_ogledaniFilmi(id_uporabnika):
                                WHERE uporabnik = ? AND vsec IN (?,?)''', [id_uporabnika, True, False])
         return cur.fetchall()
 
+def pokazi_vsecniFilmi(id_uporabnika):
+    '''Vrnemo vse filme, ki jih je uporabnik že pogledal'''
+
+    with baza:
+        cur = baza.cursor()
+        
+        cur.execute('''SELECT Filmi.id, Filmi.naslov FROM Filmi JOIN Predlogi ON Filmi.id = Predlogi.film
+                               WHERE uporabnik = ? AND vsec = ?''', [id_uporabnika, True])
+        return cur.fetchall()
+
+def pokazi_nevsecniFilmi(id_uporabnika):
+    '''Vrnemo vse filme, ki jih je uporabnik že pogledal'''
+
+    with baza:
+        cur = baza.cursor()
+        
+        cur.execute('''SELECT Filmi.id, Filmi.naslov FROM Filmi JOIN Predlogi ON Filmi.id = Predlogi.film
+                               WHERE uporabnik = ? AND vsec = ?''', [id_uporabnika, False])
+        return cur.fetchall()
+
     
 def pokazi_filmiZaPogledat(id_uporabnika): 
     '''Vrnemo vse filme, ki jih uporabnik želi pogledati'''
-    
-    
-    
+
     with baza:
         cur = baza.cursor()
+        
         cur.execute('''SELECT Filmi.id, Filmi.naslov FROM Filmi JOIN Predlogi ON Filmi.id = Predlogi.film
-                               WHERE uporabnik = ?''', [id_uporabnika])
-        vsi_filmi = cur.fetchall()
+                               WHERE uporabnik = ? AND vsec IS NULL''', [id_uporabnika])
+        return cur.fetchall()
 
-        ogledani = pokazi_ogledaniFilmi(id_uporabnika)
+    
+##    with baza:
+##        cur = baza.cursor()
+##        cur.execute('''SELECT Filmi.id, Filmi.naslov FROM Filmi JOIN Predlogi ON Filmi.id = Predlogi.film
+##                               WHERE uporabnik = ?''', [id_uporabnika])
+##        vsi_filmi = cur.fetchall()
+##
+##
+##        ogledani = pokazi_ogledaniFilmi(id_uporabnika)
+##
+##        for film in vsi_filmi:
+##            if film in ogledani:
+##                vsi_filmi.remove(film)
+##                
+##
+##        return vsi_filmi
 
-        for film in vsi_filmi:
-            if film in ogledani:
-                vsi_filmi.remove(film)
-                
+def lahko_doda_predlog(id_uporabnika, id_filma):
+    ''' Preveri, èe uporabnik doloèenega filma še ni pogledal in ga nima med predlogi za ogled '''
+    with baza:
+        cur = baza.cursor()
+        
+        cur.execute('''SELECT * FROM Predlogi WHERE uporabnik = ? AND film = ?''', [id_uporabnika, id_filma])
+        sez = cur.fetchall()
 
-        return vsi_filmi
+        if sez == []:
+            return True
+        return False
+
+
 
 def komentiranje(id_uporabnika, id_filma, komentar):
     '''dodamo komentar na film v bazo'''
@@ -202,9 +257,38 @@ def komentiranje(id_uporabnika, id_filma, komentar):
     with baza:
         cur = baza.cursor()
         cur.execute('''INSERT INTO Komentarji (film, uporabnik, komentar) VALUES (?, ?, ?)''', [id_filma, id_uporabnika, komentar])
-    
-    
 
 
+def pokazi_komentarje(id_filma):
+    '''pogledamo vse komentarje za doloèen film'''
+    with baza:
+        cur = baza.cursor()
+        cur.execute('''SELECT Komentarji.uporabnik, Komentarji.komentar FROM Komentarji WHERE film = ?''', [id_filma])
+
+        komentarji = cur.fetchall()
+        vrni = []
+        for (id_uporabnika, komentar) in komentarji:
+            cur.execute('''SELECT Uporabniki.up_Ime FROM Uporabniki WHERE ID = ?''', [id_uporabnika])
+            par = (cur.fetchone()[0], komentar)
+            vrni.append(par)
+        return vrni
+
+
+    
+    
+def id_uporabnika(up_ime):
+
+    with baza:
+        cur = baza.cursor()
+        cur.execute('''SELECT Uporabniki.id FROM Uporabniki WHERE up_ime = ?''', [up_ime])
+        id_up = cur.fetchone()
+        return id_up
+    
+def kukiji(username):
+    c = baza.cursor()
+    c.execute("SELECT up_ime FROM Uporabniki WHERE up_ime=?",[username])
+    r = c.fetchone()
+    c.close ()
+    return r
     
     
