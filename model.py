@@ -21,10 +21,9 @@ def iskanje_filmov(beseda='', leto_zacetek=1000, leto_konec=3000, ocena_min=0, o
         filmi = cur.fetchall()
         if len(filmi) != 0:
             sez = []
-            sez.append(filmi[0])
-            for i in range(len(filmi)-1):
-                if filmi[i] != filmi[i+1]:
-                    sez.append(filmi[i+1])
+            for i in range(len(filmi)):
+                if filmi[i] not in sez:
+                    sez.append(filmi[i])
             return sez
         return filmi
 
@@ -60,18 +59,30 @@ def iskanje_po_igralcih(ime_igralca=''):
 
 
 def podatki_filma(id_filma):
-    '''vrne vse podatke o filmi'''
+    '''vrne vse podatke o filmi, razen zvrsti'''
 
     with baza:
 
         cur = baza.cursor()
-        cur.execute('''SELECT Filmi.naslov, Filmi.trajanje, Filmi.ocena, Filmi.opis, Filmi.reziser, Filmi.scenarist, Filmi.leto, Zvrsti.zvrst
+        cur.execute('''SELECT Filmi.naslov, Filmi.trajanje, Filmi.ocena, Filmi.opis, Filmi.reziser, Filmi.scenarist, Filmi.leto
                   FROM Filmi
-                  JOIN Zvrsti_filma ON Filmi.id = Zvrsti_filma.film
-                  JOIN Zvrsti ON Zvrsti_filma.zvrst = Zvrsti.id
                   WHERE Filmi.id =?''', [id_filma])
         return cur.fetchone()
 
+    
+def zvrsti_filma(id_filma):
+    '''vrne vse zvrsti filma'''
+    with baza:
+
+        cur = baza.cursor()
+        cur.execute('''SELECT Zvrsti.zvrst
+                  FROM Zvrsti
+                  JOIN Zvrsti_filma ON Zvrsti.id = Zvrsti_filma.zvrst 
+                  WHERE Zvrsti_filma.film =?''', [id_filma])
+        return cur.fetchall()
+
+
+    
 
 def podatki_igralci(id_filma):
     '''vrne ime, priimek igralca in njegovo vlogo za podani film'''

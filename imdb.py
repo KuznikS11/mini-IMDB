@@ -51,6 +51,7 @@ def homepage_get():
     up_ime = get_user()
     id_up = model.id_uporabnika(up_ime)
     filmi = model.iskanje_filmov()
+    random.shuffle(filmi)
     od = random.randint(0,len(filmi)-5)
     return{'up_ime' : up_ime,
            'id_up' : id_up,
@@ -90,7 +91,8 @@ def film(id):
     id_filma = id
     up_ime = get_user()
     id_up = model.id_uporabnika(up_ime)
-    naslov, trajanje, ocena, opis, reziser, scenarist, leto, zvrst = model.podatki_filma(id)
+    naslov, trajanje, ocena, opis, reziser, scenarist, leto = model.podatki_filma(id)
+    zvrsti = model.zvrsti_filma(id)
     igralci = model.podatki_igralci(id)
     komentarji = model.pokazi_komentarje(id)
     if up_ime:
@@ -104,7 +106,7 @@ def film(id):
                 'reziser' : reziser,
                 'scenarist': scenarist,
                 'leto' : leto,
-                'zvrst' : zvrst,
+                'zvrsti' : zvrsti,
                 'igralci' : igralci,
                 'komentarji' : komentarji,
                 'id_filma' : id_filma,
@@ -208,10 +210,8 @@ def registracija_get():
 @bottle.post('/registracija/')
 @bottle.view('registracija')
 def registracija_post():
-    up_ime = bottle.request.query.up_ime
-    geslo = bottle.request.query.geslo
-    print('up_ime:' + up_ime)
-    print('geslo:' +geslo)
+    up_ime = bottle.request.forms.up_ime
+    geslo = bottle.request.forms.geslo
     id_up = model.dodaj_uporabnika(up_ime, geslo)
     if id_up is None:
  
