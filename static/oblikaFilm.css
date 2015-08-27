@@ -13,3 +13,7 @@ li{
 footer{
        margin-left: 100px
 }
+
+.jumbotron {
+   background-color: rgba(78, 251, 78, 0.12);
+}

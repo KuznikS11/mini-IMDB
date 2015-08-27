@@ -18,7 +18,7 @@
     <link href="/static/jumbotron.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="/static/oblikaIsk.css" rel="stylesheet">
+    <link href="/static/oblikaUp.css" rel="stylesheet">
 
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
@@ -71,6 +71,8 @@
 	%end
 	</ul>
 
+	<br>
+
 	<h2> Fimi, ki vam niso bili všeč: </h2>
 
 	<ul>
@@ -79,6 +81,8 @@
 	%end
 	</ul>
 	
+	<br>
+
 	<h2> Fimi, ki jih želite pogledati: </h2>
 
 	<ul>
@@ -86,8 +90,12 @@
 	<li><a href="/film/{{id}}">{{ ime }}</a>
 	%end
 	</ul>
-	<a href="/predlogi/{{id_up}}" class="btn btn-info" role="button">Želim dodatne predloge</a>
 
+	<br>
+
+	%if vsecni != []:
+	<a href="/predlogi/{{id_up}}" class="btn btn-info" role="button">Želim dodatne predloge</a>
+	%end
 
 	%else:
 	 <div class="alert alert-warning">

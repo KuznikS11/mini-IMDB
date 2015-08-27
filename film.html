@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="si">
+<html lang="sl">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -76,7 +76,11 @@
         <h1> {{ naslov }} </h1>
 
 	<p><strong>Opis filma:</strong> {{opis}}<br>
-	<strong>Zvrst:</strong> {{zvrst}} <br>
+	<strong>Zvrsti:</strong> 
+				%for zvrst in zvrsti:
+					{{zvrst[0]}}/
+				%end
+				<br>
 	<strong>Trajanje filma :</strong> {{ trajanje}} min <br>
 	<strong>Leto Nastanka:</strong> {{leto}} <br>
 	<strong>Ocena:</strong>  {{ ocena }} <br>

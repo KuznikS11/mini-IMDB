@@ -3,5 +3,14 @@
 }
 
 .jumbotron h1{
-   color: green
+   color: green;
+}
+
+.jumbotron h2{
+   font-size: 35px;
+   color: #19BB14;
+}
+
+.jumbotron {
+   background-color: rgba(78, 251, 78, 0.12);
 }
